@@ -29,7 +29,7 @@ npm i -g rn-find          # or: npx rn-find …
 
 Requirements
 
-- A **dev build** of the app connected to Metro (Expo dev-client or bare RN debug build). Release builds have no inspector.
+- A **dev build** of the app connected to Metro (Expo dev-client or bare RN debug build). Release builds have no inspector. Both the old (Paper) and the New Architecture (Fabric / Bridgeless) are supported.
 - iOS touches: [`idb`](https://fbidb.io) — `brew tap facebook/fb && brew install idb-companion && pipx install fb-idb`
 - Android touches: `adb` on PATH (experimental — coordinates are converted with `wm density`, tested less than iOS)
 - `press`, `type` (without `--native`), `find`, `wait` need neither idb nor adb.

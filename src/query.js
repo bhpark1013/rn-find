@@ -86,7 +86,13 @@ export function buildQuerySource({ pattern, flags = "", maxNodes = 1_000_000 }) 
     };
     try {
       var node = h.fiber.stateNode;
-      if (node && typeof node.measureInWindow === "function") node.measureInWindow(function (x, y, w, h2) { done({ x: x, y: y, w: w, h: h2 }); });
+      var cb = function (x, y, w, h2) { done({ x: x, y: y, w: w, h: h2 }); };
+      // Old architecture (Paper): the stateNode is the host instance with measureInWindow.
+      if (node && typeof node.measureInWindow === "function") node.measureInWindow(cb);
+      // New architecture (Fabric): stateNode is { node, canonical } with no measure methods;
+      // the shadow node handle goes through the global Fabric UIManager instead.
+      else if (node && node.node && globalThis.nativeFabricUIManager && typeof globalThis.nativeFabricUIManager.measureInWindow === "function") globalThis.nativeFabricUIManager.measureInWindow(node.node, cb);
+      else if (node && node.canonical && node.canonical.publicInstance && typeof node.canonical.publicInstance.measureInWindow === "function") node.canonical.publicInstance.measureInWindow(cb);
       else done(null);
     } catch (e) { done(null); }
   });

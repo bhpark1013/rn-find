@@ -48,10 +48,24 @@ export function chooseTarget(targets, deviceHint) {
 
 /** Open a CDP session. Returns { evaluate(expr) → value, close() }. */
 export async function openSession(target) {
-  const ws = new WebSocket(target.wsUrl);
+  // The New Architecture (Bridgeless / Fusebox) inspector proxy only attaches the Hermes
+  // runtime to a debugger whose Origin header is in its allowlist; without it the socket
+  // still upgrades (101) but every CDP message hangs unanswered. The proxy lists 127.0.0.1
+  // but not the "localhost" spelling, so normalize localhost -> 127.0.0.1 like the RN
+  // DevTools frontend does. The old bridge ignored Origin entirely, which is why this only
+  // began mattering on Bridgeless apps.
+  let origin;
+  try {
+    const u = new URL(target.wsUrl);
+    if (u.hostname === "localhost") u.hostname = "127.0.0.1";
+    origin = `${u.protocol === "wss:" ? "https:" : "http:"}//${u.host}`;
+  } catch {
+    origin = "http://127.0.0.1";
+  }
+  const ws = new WebSocket(target.wsUrl, { headers: { Origin: origin } });
   await new Promise((resolve, reject) => {
     ws.onopen = resolve;
-    ws.onerror = () => reject(new RnFindError(`WebSocket to ${target.wsUrl} failed (another debugger attached?)`, 3));
+    ws.onerror = () => reject(new RnFindError(`WebSocket to ${target.wsUrl} failed (a debugger — Chrome DevTools or React Native DevTools — may be attached; Hermes allows only one)`, 3));
   });
   let seq = 0;
   const pending = new Map();

@@ -1,6 +1,6 @@
 {
   "name": "rn-find",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Find and tap React Native elements by text through Metro's Hermes inspector. No testIDs, no in-app SDK, no MCP server — one CLI.",
   "type": "module",
   "bin": { "rn-find": "bin/rn-find.js" },
