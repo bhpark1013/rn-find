@@ -99,7 +99,10 @@ export async function main(argv) {
       emit({ ...o, json: !o.plain }, { target: target.title, visited: res.visited, truncated: res.truncated, elements: res.elements });
       return res.elements.length ? 0 : 1;
     }
-    const hit = res.elements[index];
+    // `type` wants an input; if the regex also matched plain text (a label next to the field,
+    // a description that happens to contain the placeholder), prefer the inputs.
+    const pool = cmd === "type" && res.elements.some((e) => e.role === "input") ? res.elements.filter((e) => e.role === "input") : res.elements;
+    const hit = pool[index];
     if (!hit) throw new RnFindError(`No on-screen match #${index} for /${pattern}/ (${res.elements.length} match${res.elements.length === 1 ? "" : "es"}). Try \`rn-find find\` or --all.`);
 
     if (cmd === "press") {
@@ -140,7 +143,7 @@ function emit(o, payload) {
   if (o.json || payload.elements) return console.log(JSON.stringify(payload, null, o.json ? 0 : 1));
   const line = payload.tapped ? `tapped "${payload.element.text}" at ${payload.tapped.join(",")}`
     : payload.pressed ? `pressed "${payload.pressed}" via ${payload.via}`
-    : payload.typed ? `typed ${JSON.stringify(payload.typed)} into "${payload.into}"`
+    : "typed" in payload ? `typed ${JSON.stringify(payload.typed)} into "${payload.into}"`
     : JSON.stringify(payload);
   console.log(line);
 }

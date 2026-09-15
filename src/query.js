@@ -113,9 +113,15 @@ export function buildTypeSource(i, text) {
   if (h.role !== "input") return "not-input";
   var t = ${JSON.stringify(text)};
   try {
+    // Prefer onChangeText; only fall back to onChange, with a plausible nativeEvent, when the
+    // input has no onChangeText. Calling both with a bare event confused handlers that read
+    // nativeEvent.target and forwarded it to a UIManager command (RCTLogArgumentError, which
+    // also trips the dev-client error overlay). No setNativeProps for the same reason.
     if (typeof p.onChangeText === "function") p.onChangeText(t);
-    if (typeof p.onChange === "function") p.onChange({ nativeEvent: { text: t } });
-    if (h.fiber.stateNode && typeof h.fiber.stateNode.setNativeProps === "function") h.fiber.stateNode.setNativeProps({ text: t });
+    else if (typeof p.onChange === "function") {
+      var node = h.fiber.stateNode || {};
+      p.onChange({ nativeEvent: { text: t, eventCount: 0, target: node._nativeTag || node.__nativeTag || null } });
+    } else return "no-handler";
     return "ok";
   } catch (e) { return "threw: " + e.message; }
 })()`;
