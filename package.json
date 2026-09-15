@@ -1,0 +1,20 @@
+{
+  "name": "rn-find",
+  "version": "0.1.0",
+  "description": "Find and tap React Native elements by text through Metro's Hermes inspector. No testIDs, no in-app SDK, no MCP server — one CLI.",
+  "type": "module",
+  "bin": { "rn-find": "bin/rn-find.js" },
+  "files": ["bin", "src", "README.md", "LICENSE"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "react-native", "expo", "metro", "hermes", "cdp", "simulator", "idb", "automation", "e2e", "agent", "tap", "cli"
+  ],
+  "repository": { "type": "git", "url": "git+https://github.com/bhpark1013/rn-find.git" },
+  "homepage": "https://github.com/bhpark1013/rn-find#readme",
+  "bugs": { "url": "https://github.com/bhpark1013/rn-find/issues" },
+  "author": "bhpark1013",
+  "license": "MIT"
+}
