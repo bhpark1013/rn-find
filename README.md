@@ -78,22 +78,21 @@ Everything below also reads the fiber tree through Metro. The difference is what
 
 Pick metro-mcp or ExecBro when you want an agent to *debug* an app (console, requests, Redux). Pick rn-find when you want a script or an agent to *operate* an app that was never instrumented for testing.
 
-### Timings
+### Benchmark
 
-Wall-clock per call, M-series Mac, iPhone 17 simulator, the same 7,030-fiber screen. rn-find numbers include Node start-up; metro-mcp numbers are with its daemon already warm.
+The task every UI-automation tool has to do first: **locate an element on the current screen**. Wall-clock per call, M-series Mac, iPhone 17 simulator, a real production RN app (~4,000–7,000 fibers), each figure the median of 3–5 runs. rn-find figures include Node start-up; metro-mcp is measured with its daemon already warm.
 
-| Operation | Time | Notes |
-|---|---|---|
-| `rn-find find` | **140 ms** | connect → walk 7,030 fibers → measure → close |
-| `rn-find press` | **140 ms** | no native input involved |
-| `rn-find tap` | **450 ms** | find + `simctl list` + `idb ui tap` (~130 ms of it is idb) |
-| `idb ui describe-all` (accessibility tree) | 340 ms | returned **95 nodes** for the screen where React had 7,030; the tab bar labels were not among them |
-| `xcrun simctl io screenshot` | 200 ms | before a human or a vision model has looked at it |
-| metro-mcp `tap_element` by coordinates | 1,000 ms | idb backend |
-| metro-mcp `tap_element` by label | 2,000 ms, **fails** | label → accessibility tree fallback → "not found by IDB" |
-| metro-mcp `list_elements` | 25 ms | fast because it stops at 5,000 fibers (`traversal.complete: false`) |
+| Tool | Find an element | vs rn-find | Sees unlabeled UI? |
+|---|---|---|---|
+| **rn-find** (`find`) | **~145 ms** | — | **yes** — reads the React tree |
+| accessibility tree (`idb ui describe-all`) | ~314 ms | 2.2× slower | no — only what the app exported |
+| metro-mcp `tap_element` by coordinates | ~1,000 ms | ~7× slower | n/a (you supply coords) |
+| metro-mcp `tap_element` by label | ~1,900 ms, **fails** | ~13× slower | no — falls back to the accessibility tree |
+| screenshot + OCR / vision | ~200 ms + seconds of model inference | many× slower | fuzzy — ambiguous on CJK / overlapping text |
 
-The point is less the milliseconds than the outcome column: on an app without testIDs, the accessibility tree and label-based tools do not find the button at all, so their real cost is a screenshot plus a guess plus a retry.
+**Two honest caveats on those numbers.** First, on elements the accessibility tree *does* expose (a labelled button), `idb` is actually competitive per call — sometimes a hair faster than rn-find's fiber walk. rn-find's decisive win is on the elements it **misses entirely**: custom tab bars, gorhom bottom sheets (which come back as *zero nodes*), icon buttons, FlashList rows. There the old path isn't 2× slower, it's a screenshot plus a human or a vision model reading coordinates off it — seconds, per element. Second, these are tool-execution times; agent reasoning time is excluded and dwarfs them either way.
+
+**Why rn-find is fast.** It sends a single `Runtime.evaluate` over the Hermes inspector Metro already exposes; that one round-trip walks the fiber tree in-process and returns every rendered element with coordinates. No daemon, no CDP proxy, no per-element query. metro-mcp interposes an MCP daemon and a CDP proxy, so each call is several JSON-RPC round-trips and `tap_element` resolves-then-taps; `idb` re-serializes the whole XCUITest accessibility tree every call and can only see what the app chose to export; screenshot tools pay for image encoding plus model inference. The deeper reason is the source of truth: other tools read what the app *exported* (accessibility tree) or the *pixels* (screenshot) — both lossy projections — while rn-find reads the React tree the app actually rendered, which is why it is both faster and complete.
 
 ## Limitations
 
