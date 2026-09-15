@@ -1,0 +1,13 @@
+{
+  "name": "@bhpark1013/rn-find",
+  "version": "0.2.0",
+  "exports": {
+    ".": "./src/cli.js",
+    "./inspector": "./src/inspector.js",
+    "./query": "./src/query.js",
+    "./select": "./src/select.js"
+  },
+  "publish": {
+    "include": ["src", "bin", "README.md", "LICENSE", "jsr.json"]
+  }
+}
