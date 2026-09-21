@@ -1,0 +1,49 @@
+name: publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push the version tag
+      id-token: write   # OIDC token for npm trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Use npm >= 11.5.1 (required for trusted publishing)
+        run: npm i -g npm@latest
+
+      - run: npm test
+
+      - name: Skip if this version is already on npm
+        id: check
+        run: |
+          local_v=$(node -p "require('./package.json').version")
+          remote_v=$(npm view rn-find version 2>/dev/null || echo none)
+          echo "local=$local_v" >> "$GITHUB_OUTPUT"
+          if [ "$local_v" = "$remote_v" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "rn-find@$local_v already published — nothing to do."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "publishing rn-find@$local_v (registry has $remote_v)"
+          fi
+
+      - name: Publish
+        if: steps.check.outputs.publish == 'true'
+        run: npm publish --access public
+
+      - name: Tag the release
+        if: steps.check.outputs.publish == 'true'
+        run: |
+          git tag "v${{ steps.check.outputs.local }}"
+          git push origin "v${{ steps.check.outputs.local }}"
